@@ -4,7 +4,7 @@ import jax
 from jax import nn
 import jax.numpy as jnp
 
-from agentlace.trainer import TrainerConfig
+# from agentlace.trainer import TrainerConfig
 
 from serl_launcher.common.typing import Batch, PRNGKey
 from serl_launcher.common.wandb import WandBLogger
@@ -230,12 +230,12 @@ def make_batch_augmentation_func(image_keys) -> callable:
     return augment_batch
 
 
-def make_trainer_config(port_number: int = 5588, broadcast_port: int = 5589):
-    return TrainerConfig(
-        port_number=port_number,
-        broadcast_port=broadcast_port,
-        request_types=["send-stats"],
-    )
+# def make_trainer_config(port_number: int = 5588, broadcast_port: int = 5589):
+#     return TrainerConfig(
+#         port_number=port_number,
+#         broadcast_port=broadcast_port,
+#         request_types=["send-stats"],
+#     )
 
 
 def make_wandb_logger(
