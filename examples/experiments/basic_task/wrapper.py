@@ -21,8 +21,6 @@ class BasicEnv(FrankaEnv):
             on_press=on_press)
         listener.start()
 
-        print("action space: ", self.action_space.shape)
-
     def go_to_reset(self, joint_reset=False):
         """
         Move to the rest position defined in base class.

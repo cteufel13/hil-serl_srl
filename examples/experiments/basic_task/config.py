@@ -123,8 +123,13 @@ class TrainConfig(DefaultTrainingConfig):
 
             def reward_func(obs):
                 sigmoid = lambda x: 1 / (1 + jnp.exp(-x))
-                # added check for z position to further robustify classifier, but should work without as well
-                return int(sigmoid(classifier(obs)) > 0.85 and obs['state'][0, 6] > 0.04)
+
+                pred = sigmoid(classifier(obs)).item()
+                zpos = float(obs['state'][0, 6])
+
+                print(int(pred > 0.85), pred)
+
+                return int(pred > 0.85)
 
             env = MultiCameraBinaryRewardClassifierWrapper(env, reward_func)
         return env
