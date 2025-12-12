@@ -64,6 +64,32 @@ class MultiCameraBinaryRewardClassifierWrapper(gym.Wrapper):
         obs, info = self.env.reset(**kwargs)
         info['succeed'] = False
         return obs, info
+
+class SpacemouseBinaryRewardClassifierWrapper(gym.Wrapper):
+    """
+    This wrapper uses the spacemouse intervention to compute the reward,
+    """
+
+    def __init__(self, env: Env, target_hz = None):
+        super().__init__(env)
+        self.target_hz = target_hz
+
+
+    def step(self, action):
+        start_time = time.time()
+        obs, rew, done, truncated, info = self.env.step(action)
+        rew = info.get("left") or info.get("right")
+        done = done or rew
+        info['succeed'] = bool(rew)
+        if self.target_hz is not None:
+            time.sleep(max(0, 1/self.target_hz - (time.time() - start_time)))
+            
+        return obs, rew, done, truncated, info
+
+    def reset(self, **kwargs):
+        obs, info = self.env.reset(**kwargs)
+        info['succeed'] = False
+        return obs, info
     
     
 class MultiStageBinaryRewardClassifierWrapper(gym.Wrapper):

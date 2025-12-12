@@ -93,6 +93,7 @@ class RelativeFrame(gym.Wrapper):
         Transform action from body(end-effector) frame into into spatial(base) frame
         using the transform matrix. 
         """
+        print("Transform matrix:", self.transform_matrix)
         action = np.array(action)  # in case action is a jax read-only array
         action[:6] = self.transform_matrix @ action[:6]
         return action
