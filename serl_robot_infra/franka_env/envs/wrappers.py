@@ -259,10 +259,12 @@ class SpacemouseIntervention(gym.ActionWrapper):
         if self.gripper_enabled:
             if self.left:  # close gripper
                 gripper_action = np.random.uniform(-1, -0.9, size=(1,))
-                intervened = True
+                # intervened = True
+                # no intervention because we use the button as reward signal
             elif self.right:  # open gripper
                 gripper_action = np.random.uniform(0.9, 1, size=(1,))
-                intervened = True
+                # intervened = True
+                # no intervention because we use the button as reward signal
             else:
                 gripper_action = np.zeros((1,))
             expert_a = np.concatenate((expert_a, gripper_action), axis=0)
@@ -273,6 +275,7 @@ class SpacemouseIntervention(gym.ActionWrapper):
             expert_a = filtered_expert_a
 
         if intervened:
+            expert_a *= np.sqrt(3) # policy action can be 1 in each dimension, spacemouse action max norm is sqrt(3)
             return expert_a, True
 
         return action, False

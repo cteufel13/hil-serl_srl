@@ -51,7 +51,7 @@ class EnvConfig(DefaultEnvConfig):
     RANDOM_RESET = True
     RANDOM_XY_RANGE = 0.02
     RANDOM_RZ_RANGE = 0.05
-    ACTION_SCALE = (0.03, 0.05, 1)
+    ACTION_SCALE = (0.015, 0.05, 1)
     DISPLAY_IMAGE = True
     MAX_EPISODE_LENGTH = 150
     COMPLIANCE_PARAM = {
@@ -60,12 +60,12 @@ class EnvConfig(DefaultEnvConfig):
         "rotational_stiffness": 150,
         "rotational_damping": 7,
         "translational_Ki": 0,
-        "translational_clip_x": 0.01,
-        "translational_clip_y": 0.01,
-        "translational_clip_z": 0.01,
-        "translational_clip_neg_x": 0.01,
-        "translational_clip_neg_y": 0.01,
-        "translational_clip_neg_z": 0.01,
+        "translational_clip_x": 0.1,
+        "translational_clip_y": 0.1,
+        "translational_clip_z": 0.1,
+        "translational_clip_neg_x": 0.1,
+        "translational_clip_neg_y": 0.1,
+        "translational_clip_neg_z": 0.1,
         "rotational_clip_x": 0.5,
         "rotational_clip_y": 0.5,
         "rotational_clip_z": 0.5,
