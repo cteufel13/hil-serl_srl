@@ -77,6 +77,7 @@ def actor(agent, data_store, intvn_data_store, env, sampling_rng):
             agent.state,
             step=FLAGS.eval_checkpoint_step,
         )
+        ckpt = jax.device_put(ckpt, sharding.replicate())
         agent = agent.replace(state=ckpt)
 
         for episode in range(FLAGS.eval_n_trajs):
@@ -87,7 +88,7 @@ def actor(agent, data_store, intvn_data_store, env, sampling_rng):
                 sampling_rng, key = jax.random.split(sampling_rng)
                 actions = agent.sample_actions(
                     observations=jax.device_put(obs),
-                    argmax=False,
+                    argmax=True,
                     seed=key
                 )
                 actions = np.asarray(jax.device_get(actions))
