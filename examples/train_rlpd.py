@@ -378,7 +378,12 @@ def main(_):
 
     rng, sampling_rng = jax.random.split(rng)
     
-    if config.setup_mode == 'single-arm-fixed-gripper' or config.setup_mode == 'dual-arm-fixed-gripper':   
+    if config.setup_mode == 'single-arm-fixed-gripper' or config.setup_mode == 'dual-arm-fixed-gripper':
+        # Get augmentation function from config if available
+        augmentation_fn = None
+        if hasattr(config, 'get_augmentation_function'):
+            augmentation_fn = config.get_augmentation_function()
+
         agent: SACAgent = make_sac_pixel_agent(
             seed=FLAGS.seed,
             sample_obs=env.observation_space.sample(),
@@ -386,6 +391,7 @@ def main(_):
             image_keys=config.image_keys,
             encoder_type=config.encoder_type,
             discount=config.discount,
+            augmentation_function=augmentation_fn,
         )
         include_grasp_penalty = False
     elif config.setup_mode == 'single-arm-learned-gripper':

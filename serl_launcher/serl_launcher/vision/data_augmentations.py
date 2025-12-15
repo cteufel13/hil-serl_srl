@@ -334,7 +334,7 @@ def gaussian_blur(
         sigma_max=sigma_max,
         apply_prob=apply_prob,
     )
-    return blur_fn(rng, image)
+    return blur_fn(image, rng)
 
 
 def solarize(image, rng, *, threshold, apply_prob):
