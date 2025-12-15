@@ -21,6 +21,16 @@ CONSERVATIVE = {
     "blur_prob": 0.05,
     "blur_sigma_range": (0.1, 0.3),
     "grayscale_prob": 0.02,
+    # New augmentations
+    "cutout_prob": 0.1,
+    "cutout_size_range": (0.05, 0.15),
+    "cutout_fill_value": 0.5,
+    "erasing_prob": 0.05,
+    "erasing_size_range": (0.05, 0.15),
+    "gaussian_noise_prob": 0.1,
+    "gaussian_noise_std_range": (0.0, 0.02),
+    "posterize_prob": 0.05,
+    "posterize_bits_range": (4, 6),
 }
 
 # Moderate Profile - Use if conservative works well and you want more diversity
@@ -38,6 +48,16 @@ MODERATE = {
     "blur_prob": 0.1,
     "blur_sigma_range": (0.1, 0.5),
     "grayscale_prob": 0.05,
+    # New augmentations
+    "cutout_prob": 0.2,
+    "cutout_size_range": (0.08, 0.2),
+    "cutout_fill_value": 0.5,
+    "erasing_prob": 0.1,
+    "erasing_size_range": (0.08, 0.2),
+    "gaussian_noise_prob": 0.15,
+    "gaussian_noise_std_range": (0.0, 0.04),
+    "posterize_prob": 0.1,
+    "posterize_bits_range": (3, 6),
 }
 
 # Aggressive Profile - Maximum augmentation (use with caution)
@@ -55,6 +75,16 @@ AGGRESSIVE = {
     "blur_prob": 0.2,
     "blur_sigma_range": (0.1, 1.0),
     "grayscale_prob": 0.1,
+    # New augmentations
+    "cutout_prob": 0.3,
+    "cutout_size_range": (0.1, 0.25),
+    "cutout_fill_value": 0.5,
+    "erasing_prob": 0.2,
+    "erasing_size_range": (0.1, 0.25),
+    "gaussian_noise_prob": 0.25,
+    "gaussian_noise_std_range": (0.0, 0.08),
+    "posterize_prob": 0.2,
+    "posterize_bits_range": (2, 5),
 }
 
 # Crop Only - Just random crop (same as original default)
@@ -72,6 +102,16 @@ CROP_ONLY = {
     "blur_prob": 0.0,
     "blur_sigma_range": (0.1, 0.5),
     "grayscale_prob": 0.0,
+    # New augmentations (disabled)
+    "cutout_prob": 0.0,
+    "cutout_size_range": (0.05, 0.15),
+    "cutout_fill_value": 0.5,
+    "erasing_prob": 0.0,
+    "erasing_size_range": (0.05, 0.15),
+    "gaussian_noise_prob": 0.0,
+    "gaussian_noise_std_range": (0.0, 0.02),
+    "posterize_prob": 0.0,
+    "posterize_bits_range": (4, 6),
 }
 
 # No Augmentation - Disable all augmentations
@@ -88,6 +128,16 @@ NONE = {
     "blur_prob": 0.0,
     "blur_sigma_range": (0.1, 0.5),
     "grayscale_prob": 0.0,
+    # New augmentations (disabled)
+    "cutout_prob": 0.0,
+    "cutout_size_range": (0.05, 0.15),
+    "cutout_fill_value": 0.5,
+    "erasing_prob": 0.0,
+    "erasing_size_range": (0.05, 0.15),
+    "gaussian_noise_prob": 0.0,
+    "gaussian_noise_std_range": (0.0, 0.02),
+    "posterize_prob": 0.0,
+    "posterize_bits_range": (4, 6),
 }
 
 
@@ -106,6 +156,16 @@ TEST = {
     "blur_prob": 0.5,
     "blur_sigma_range": (0.5, 1.5),
     "grayscale_prob": 0.0,
+    # New augmentations (very visible for testing)
+    "cutout_prob": 0.5,
+    "cutout_size_range": (0.15, 0.3),
+    "cutout_fill_value": 0.5,
+    "erasing_prob": 0.3,
+    "erasing_size_range": (0.15, 0.3),
+    "gaussian_noise_prob": 0.5,
+    "gaussian_noise_std_range": (0.05, 0.15),
+    "posterize_prob": 0.5,
+    "posterize_bits_range": (2, 4),
 }
 
 # Profile registry
@@ -163,5 +223,11 @@ def print_config(config):
     print("\nOther Augmentations:")
     print(f"  Gaussian Blur: prob={config['blur_prob']}, sigma={config['blur_sigma_range']}")
     print(f"  Grayscale:     prob={config['grayscale_prob']}")
+
+    print("\nOcclusion & Noise Augmentations:")
+    print(f"  Random Cutout:      prob={config['cutout_prob']}, size={config['cutout_size_range']}, fill={config['cutout_fill_value']}")
+    print(f"  Random Erasing:     prob={config['erasing_prob']}, size={config['erasing_size_range']}")
+    print(f"  Gaussian Noise:     prob={config['gaussian_noise_prob']}, std={config['gaussian_noise_std_range']}")
+    print(f"  Posterize:          prob={config['posterize_prob']}, bits={config['posterize_bits_range']}")
 
     print("=" * 60 + "\n")

@@ -16,6 +16,10 @@ from serl_launcher.vision.data_augmentations import (
     batched_random_crop,
     color_transform,
     gaussian_blur,
+    random_cutout,
+    random_erasing,
+    additive_gaussian_noise,
+    posterize,
 )
 
 ##############################################################################
@@ -259,6 +263,15 @@ def make_enhanced_augmentation_func(image_keys, augmentation_config=None) -> cal
                 - blur_prob: float, probability of applying gaussian blur (default: 0.0)
                 - blur_sigma_range: tuple, (min, max) sigma for gaussian blur (default: (0.1, 0.5))
                 - grayscale_prob: float, probability of converting to grayscale (default: 0.0)
+                - cutout_prob: float, probability of applying random cutout (default: 0.0)
+                - cutout_size_range: tuple, (min, max) size as fraction of image (default: (0.05, 0.15))
+                - cutout_fill_value: float, fill value for cutout region (default: 0.5)
+                - erasing_prob: float, probability of applying random erasing (default: 0.0)
+                - erasing_size_range: tuple, (min, max) size as fraction of image (default: (0.05, 0.15))
+                - gaussian_noise_prob: float, probability of applying additive gaussian noise (default: 0.0)
+                - gaussian_noise_std_range: tuple, (min, max) std for gaussian noise (default: (0.0, 0.02))
+                - posterize_prob: float, probability of applying posterize (default: 0.0)
+                - posterize_bits_range: tuple, (min, max) bits to keep (default: (4, 6))
 
     Returns:
         Callable augmentation function that takes (batch, rng) and returns augmented batch
@@ -279,6 +292,17 @@ def make_enhanced_augmentation_func(image_keys, augmentation_config=None) -> cal
     blur_prob = augmentation_config.get("blur_prob", 0.0)
     blur_sigma_range = augmentation_config.get("blur_sigma_range", (0.1, 0.5))
     grayscale_prob = augmentation_config.get("grayscale_prob", 0.0)
+
+    # New augmentations
+    cutout_prob = augmentation_config.get("cutout_prob", 0.0)
+    cutout_size_range = augmentation_config.get("cutout_size_range", (0.05, 0.15))
+    cutout_fill_value = augmentation_config.get("cutout_fill_value", 0.5)
+    erasing_prob = augmentation_config.get("erasing_prob", 0.0)
+    erasing_size_range = augmentation_config.get("erasing_size_range", (0.05, 0.15))
+    gaussian_noise_prob = augmentation_config.get("gaussian_noise_prob", 0.0)
+    gaussian_noise_std_range = augmentation_config.get("gaussian_noise_std_range", (0.0, 0.02))
+    posterize_prob = augmentation_config.get("posterize_prob", 0.0)
+    posterize_bits_range = augmentation_config.get("posterize_bits_range", (4, 6))
 
     # Determine if color augmentation is enabled
     color_aug_enabled = (
@@ -360,6 +384,90 @@ def make_enhanced_augmentation_func(image_keys, augmentation_config=None) -> cal
 
                 # Reshape back and denormalize
                 img = img_blurred.reshape(*batch_shape, *img_normalized.shape[2:]) * 255.0
+
+            # 4. New augmentations (cutout, erasing, noise, posterize)
+            rng, cutout_rng, erasing_rng, noise_rng, posterize_rng = jax.random.split(rng, 5)
+
+            # Random Cutout
+            if cutout_prob > 0:
+                img_normalized = img / 255.0
+
+                def apply_cutout_to_single(single_img, single_rng):
+                    return random_cutout(
+                        single_img,
+                        single_rng,
+                        min_size=cutout_size_range[0],
+                        max_size=cutout_size_range[1],
+                        fill_value=cutout_fill_value,
+                        apply_prob=cutout_prob,
+                    )
+
+                batch_shape = img_normalized.shape[:2]
+                flat_batch_size = batch_shape[0] * batch_shape[1]
+                img_flat = img_normalized.reshape(flat_batch_size, *img_normalized.shape[2:])
+                cutout_rngs = jax.random.split(cutout_rng, flat_batch_size)
+                img_cutout = jax.vmap(apply_cutout_to_single, in_axes=(0, 0))(img_flat, cutout_rngs)
+                img = img_cutout.reshape(*batch_shape, *img_normalized.shape[2:]) * 255.0
+
+            # Random Erasing
+            if erasing_prob > 0:
+                img_normalized = img / 255.0
+
+                def apply_erasing_to_single(single_img, single_rng):
+                    return random_erasing(
+                        single_img,
+                        single_rng,
+                        min_size=erasing_size_range[0],
+                        max_size=erasing_size_range[1],
+                        apply_prob=erasing_prob,
+                    )
+
+                batch_shape = img_normalized.shape[:2]
+                flat_batch_size = batch_shape[0] * batch_shape[1]
+                img_flat = img_normalized.reshape(flat_batch_size, *img_normalized.shape[2:])
+                erasing_rngs = jax.random.split(erasing_rng, flat_batch_size)
+                img_erased = jax.vmap(apply_erasing_to_single, in_axes=(0, 0))(img_flat, erasing_rngs)
+                img = img_erased.reshape(*batch_shape, *img_normalized.shape[2:]) * 255.0
+
+            # Additive Gaussian Noise
+            if gaussian_noise_prob > 0:
+                img_normalized = img / 255.0
+
+                def apply_noise_to_single(single_img, single_rng):
+                    return additive_gaussian_noise(
+                        single_img,
+                        single_rng,
+                        std_min=gaussian_noise_std_range[0],
+                        std_max=gaussian_noise_std_range[1],
+                        apply_prob=gaussian_noise_prob,
+                    )
+
+                batch_shape = img_normalized.shape[:2]
+                flat_batch_size = batch_shape[0] * batch_shape[1]
+                img_flat = img_normalized.reshape(flat_batch_size, *img_normalized.shape[2:])
+                noise_rngs = jax.random.split(noise_rng, flat_batch_size)
+                img_noisy = jax.vmap(apply_noise_to_single, in_axes=(0, 0))(img_flat, noise_rngs)
+                img = img_noisy.reshape(*batch_shape, *img_normalized.shape[2:]) * 255.0
+
+            # Posterize
+            if posterize_prob > 0:
+                img_normalized = img / 255.0
+
+                def apply_posterize_to_single(single_img, single_rng):
+                    return posterize(
+                        single_img,
+                        single_rng,
+                        min_bits=posterize_bits_range[0],
+                        max_bits=posterize_bits_range[1],
+                        apply_prob=posterize_prob,
+                    )
+
+                batch_shape = img_normalized.shape[:2]
+                flat_batch_size = batch_shape[0] * batch_shape[1]
+                img_flat = img_normalized.reshape(flat_batch_size, *img_normalized.shape[2:])
+                posterize_rngs = jax.random.split(posterize_rng, flat_batch_size)
+                img_posterized = jax.vmap(apply_posterize_to_single, in_axes=(0, 0))(img_flat, posterize_rngs)
+                img = img_posterized.reshape(*batch_shape, *img_normalized.shape[2:]) * 255.0
 
             # Update observations with augmented image
             try:

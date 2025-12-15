@@ -342,3 +342,161 @@ def solarize(image, rng, *, threshold, apply_prob):
         return jnp.where(image < threshold, image, 1.0 - image)
 
     return _maybe_apply(_apply, image, rng, apply_prob)
+
+
+def random_cutout(image, rng, *, min_size, max_size, fill_value=0.5, apply_prob=1.0):
+    """Applies random cutout to an image by masking a random rectangle.
+
+    Args:
+        image: HWC image tensor with values in [0, 1].
+        rng: PRNGKey for randomness.
+        min_size: Minimum size of cutout as fraction of image size (e.g., 0.1).
+        max_size: Maximum size of cutout as fraction of image size (e.g., 0.3).
+        fill_value: Constant value to fill the cutout region (default: 0.5 for gray).
+        apply_prob: Probability of applying the augmentation.
+
+    Returns:
+        Image with random rectangular region set to fill_value.
+    """
+    apply_rng, transform_rng = jax.random.split(rng)
+
+    def _apply(image):
+        size_rng, pos_rng = jax.random.split(transform_rng)
+        h, w = image.shape[0], image.shape[1]
+
+        # Random cutout size
+        cutout_h = jax.random.uniform(
+            size_rng, shape=(), minval=min_size * h, maxval=max_size * h
+        ).astype(jnp.int32)
+        cutout_w = jax.random.uniform(
+            size_rng, shape=(), minval=min_size * w, maxval=max_size * w
+        ).astype(jnp.int32)
+
+        # Random position
+        pos_rng_h, pos_rng_w = jax.random.split(pos_rng)
+        top = jax.random.randint(pos_rng_h, shape=(), minval=0, maxval=h - cutout_h + 1)
+        left = jax.random.randint(pos_rng_w, shape=(), minval=0, maxval=w - cutout_w + 1)
+
+        # Create mask
+        y_coords = jnp.arange(h)[:, jnp.newaxis]
+        x_coords = jnp.arange(w)[jnp.newaxis, :]
+        mask = (
+            (y_coords >= top) & (y_coords < top + cutout_h) &
+            (x_coords >= left) & (x_coords < left + cutout_w)
+        )
+        mask = mask[:, :, jnp.newaxis]  # Add channel dimension
+
+        # Apply cutout
+        return jnp.where(mask, fill_value, image)
+
+    return _maybe_apply(_apply, image, apply_rng, apply_prob)
+
+
+def random_erasing(image, rng, *, min_size, max_size, apply_prob=1.0):
+    """Applies random erasing to an image by filling a rectangle with random noise.
+
+    Args:
+        image: HWC image tensor with values in [0, 1].
+        rng: PRNGKey for randomness.
+        min_size: Minimum size of erasing region as fraction of image size (e.g., 0.1).
+        max_size: Maximum size of erasing region as fraction of image size (e.g., 0.3).
+        apply_prob: Probability of applying the augmentation.
+
+    Returns:
+        Image with random rectangular region filled with random noise.
+    """
+    apply_rng, transform_rng = jax.random.split(rng)
+
+    def _apply(image):
+        size_rng, pos_rng, noise_rng = jax.random.split(transform_rng, 3)
+        h, w = image.shape[0], image.shape[1]
+
+        # Random erasing size
+        erase_h = jax.random.uniform(
+            size_rng, shape=(), minval=min_size * h, maxval=max_size * h
+        ).astype(jnp.int32)
+        erase_w = jax.random.uniform(
+            size_rng, shape=(), minval=min_size * w, maxval=max_size * w
+        ).astype(jnp.int32)
+
+        # Random position
+        pos_rng_h, pos_rng_w = jax.random.split(pos_rng)
+        top = jax.random.randint(pos_rng_h, shape=(), minval=0, maxval=h - erase_h + 1)
+        left = jax.random.randint(pos_rng_w, shape=(), minval=0, maxval=w - erase_w + 1)
+
+        # Create mask
+        y_coords = jnp.arange(h)[:, jnp.newaxis]
+        x_coords = jnp.arange(w)[jnp.newaxis, :]
+        mask = (
+            (y_coords >= top) & (y_coords < top + erase_h) &
+            (x_coords >= left) & (x_coords < left + erase_w)
+        )
+        mask = mask[:, :, jnp.newaxis]  # Add channel dimension
+
+        # Generate random noise for the erased region
+        random_noise = jax.random.uniform(noise_rng, shape=image.shape, minval=0.0, maxval=1.0)
+
+        # Apply random erasing
+        return jnp.where(mask, random_noise, image)
+
+    return _maybe_apply(_apply, image, apply_rng, apply_prob)
+
+
+def additive_gaussian_noise(image, rng, *, std_min=0.0, std_max=0.1, apply_prob=1.0):
+    """Adds random Gaussian noise to the image.
+
+    Args:
+        image: HWC image tensor with values in [0, 1].
+        rng: PRNGKey for randomness.
+        std_min: Minimum standard deviation of the Gaussian noise.
+        std_max: Maximum standard deviation of the Gaussian noise.
+        apply_prob: Probability of applying the augmentation.
+
+    Returns:
+        Image with additive Gaussian noise, clipped to [0, 1].
+    """
+    apply_rng, transform_rng = jax.random.split(rng)
+
+    def _apply(image):
+        std_rng, noise_rng = jax.random.split(transform_rng)
+
+        # Random noise level
+        std = jax.random.uniform(std_rng, shape=(), minval=std_min, maxval=std_max)
+
+        # Generate and add noise
+        noise = jax.random.normal(noise_rng, shape=image.shape) * std
+        noisy_image = image + noise
+
+        return jnp.clip(noisy_image, 0.0, 1.0)
+
+    return _maybe_apply(_apply, image, apply_rng, apply_prob)
+
+
+def posterize(image, rng, *, min_bits=2, max_bits=6, apply_prob=1.0):
+    """Reduces the number of bits for each color channel (posterization effect).
+
+    Args:
+        image: HWC image tensor with values in [0, 1].
+        rng: PRNGKey for randomness.
+        min_bits: Minimum number of bits to keep (lower = more posterized).
+        max_bits: Maximum number of bits to keep (higher = less posterized).
+        apply_prob: Probability of applying the augmentation.
+
+    Returns:
+        Posterized image with reduced color depth.
+    """
+    apply_rng, transform_rng = jax.random.split(rng)
+
+    def _apply(image):
+        # Randomly select number of bits
+        bits = jax.random.randint(transform_rng, shape=(), minval=min_bits, maxval=max_bits + 1)
+
+        # Posterize: quantize to fewer bits
+        shift = 8 - bits
+        # Convert to 8-bit range, posterize, convert back
+        image_255 = (image * 255.0).astype(jnp.uint8)
+        posterized = ((image_255 >> shift) << shift).astype(jnp.float32)
+
+        return posterized / 255.0
+
+    return _maybe_apply(_apply, image, apply_rng, apply_prob)
